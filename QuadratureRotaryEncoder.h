@@ -14,7 +14,7 @@ public:
 	QuadratureRotaryEncoder(int pinA, int pinB, const default_constructible_ref<int>& value = default_constructible_ref<int>());
 
 	inline void setOnRotationListener(const std::function<void(RotationDirection)>& listener) {
-		_listener = listener;
+		_rotationListener = listener;
 	}
 
 	inline void setControlledValue(const default_constructible_ref<int>& value) {
@@ -26,6 +26,6 @@ public:
 
 private:
 	Bounce _debouncerA, _debouncerB;
-	std::function<void(RotationDirection)> _listener = [](RotationDirection) {};
+	std::function<void(RotationDirection)> _rotationListener = [](RotationDirection) {};
 	default_constructible_ref<int> _value;
 };

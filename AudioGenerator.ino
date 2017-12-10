@@ -13,6 +13,7 @@
 #include "WaveformSin.h"
 #include "Generator.h"
 #include "QuadratureRotaryEncoder.h"
+#include "ButtonHandler.h"
 
 //#define TFT_CS 10
 //#define TFT_DC 8
@@ -28,8 +29,10 @@ constexpr uint32_t samplingRate = 24000;
 
 #define ROT_ENC_PIN_A 11
 #define ROT_ENC_PIN_B 12
+#define BUTTON_PIN 9
 
 static QuadratureRotaryEncoder encoder(ROT_ENC_PIN_A, ROT_ENC_PIN_B);
+static ButtonHandler button(BUTTON_PIN);
 
 static int position = 0;
 
@@ -42,6 +45,8 @@ void setup()
 {
 	//display.initR(INITR_144GREENTAB); // initialize a ST7735S chip, 1.44" TFT (yellow tab on a chinese clone)
 	display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false); // initialize with the I2C addr 0x3C (for the 128x64); by default, we'll generate the high voltage from the 3.3v line internally
+	display.clearDisplay();
+	display.display();
 
 	//display.setTextColor(RGB_to_565(0, 127, 255), ST7735_BLACK);
 	display.setTextColor(WHITE);
@@ -49,18 +54,43 @@ void setup()
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
 
+	button.setButtonClickListener([]() {
+		display.clearDisplay();
+		display.print("CLICK");
+		display.display();
+	});
+
+	button.setButtonLongPressListener([]() {
+		display.clearDisplay();
+		display.print("LONG PRESS");
+		display.display();
+	});
+
+	button.setButtonPressListener([]() {
+		display.clearDisplay();
+		display.print("PRESS");
+		display.display();
+	});
+
+	button.setButtonReleaseListener([]() {
+		display.clearDisplay();
+		display.print("RELEASE");
+		display.display();
+	});
+
 	// Rotary encoder handling
 	encoder.setControlledValue(position);
 	Timer2.attachInterrupt([]() {
 		encoder.update();
+		button.update();
 	}).setFrequency(2000).start();
 
 	// Upading the display
 	Timer4.attachInterrupt([]() {
-		display.clearDisplay();
-		display.setCursor(0, 0);
-		display.print(position);
-		display.display();
+		//display.clearDisplay();
+		//display.setCursor(0, 0);
+		//display.print(position);
+		//display.display();
 	}).setFrequency(10).start();
 
 	dac_setup();
@@ -90,4 +120,5 @@ inline void dac_write(int val)
 
 void loop()
 {
+
 }

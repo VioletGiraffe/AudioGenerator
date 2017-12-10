@@ -12,8 +12,8 @@ namespace std {
 QuadratureRotaryEncoder::QuadratureRotaryEncoder(int pinA, int pinB, const default_constructible_ref<int>& value) :
 	_value(value)
 {
-	pinMode(pinA, INPUT_PULLUP);
-	pinMode(pinB, INPUT_PULLUP);
+	pinMode(pinA, INPUT);
+	pinMode(pinB, INPUT);
 
 	_debouncerA.attach(pinA);
 	_debouncerA.interval(4);
@@ -38,6 +38,6 @@ void QuadratureRotaryEncoder::update()
 				--_value.get();
 		}
 
-		_listener(cw ? CW : CCW);
+		_rotationListener(cw ? CW : CCW);
 	}
 }
