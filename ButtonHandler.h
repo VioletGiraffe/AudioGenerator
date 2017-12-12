@@ -4,12 +4,12 @@
 
 #include <functional>
 
+// The class is designed for active low level and pullup input
 class ButtonHandler
 {
 public:
 	enum NormalState {NormalOpen, NormalClosed};
-	enum ActiveLevel {ActiveLow, ActiveHigh};
-	explicit ButtonHandler(int buttonPin, NormalState normalState = NormalOpen, ActiveLevel activeLevel = ActiveLow);
+	explicit ButtonHandler(int buttonPin, NormalState normalState = NormalOpen);
 
 	inline void setButtonClickListener(const std::function<void()>& listener) {
 		_buttonClickListener = listener;
@@ -43,7 +43,6 @@ private:
 	std::function<void()> _buttonReleaseListener = [](){};
 
 	const NormalState _normalState;
-	const ActiveLevel _activeLevel;
 
 	uint32_t _lastButtonPressTimeStamp, _lastButtonClickTimestamp = 0;
 	bool _longPressInvoked = false;

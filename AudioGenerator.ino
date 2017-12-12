@@ -22,17 +22,17 @@
 
 static Adafruit_SSD1306 display;
 
-#define RGB_to_565(R, G, B) static_cast<uint16_t>(((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3))
+#define RGB888_to_565(R, G, B) static_cast<uint16_t>(((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3))
 
 static CGenerator soundGen; 
 constexpr uint32_t samplingRate = 24000;
 
 #define ROT_ENC_PIN_A 11
 #define ROT_ENC_PIN_B 12
-#define BUTTON_PIN 9
+#define BUTTON_PIN 6
 
 static QuadratureRotaryEncoder encoder(ROT_ENC_PIN_A, ROT_ENC_PIN_B);
-static ButtonHandler button(BUTTON_PIN);
+static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
 static int position = 0;
 
@@ -48,7 +48,7 @@ void setup()
 	display.clearDisplay();
 	display.display();
 
-	//display.setTextColor(RGB_to_565(0, 127, 255), ST7735_BLACK);
+	//display.setTextColor(RGB888_to_565(0, 127, 255), ST7735_BLACK);
 	display.setTextColor(WHITE);
 
 	pinMode(LED_BUILTIN, OUTPUT);
@@ -56,33 +56,51 @@ void setup()
 
 	button.setButtonClickListener([]() {
 		display.clearDisplay();
+		display.setCursor(0, 0);
 		display.print("CLICK");
 		display.display();
 	});
 
 	button.setButtonLongPressListener([]() {
 		display.clearDisplay();
+		display.setCursor(0, 0);
 		display.print("LONG PRESS");
 		display.display();
 	});
 
 	button.setButtonPressListener([]() {
 		display.clearDisplay();
+		display.setCursor(0, 0);
 		display.print("PRESS");
 		display.display();
 	});
 
 	button.setButtonReleaseListener([]() {
 		display.clearDisplay();
+		display.setCursor(0, 0);
 		display.print("RELEASE");
+		display.display();
+	});
+
+	button.setButtonDoubleClickListener([]() {
+		display.clearDisplay();
+		display.setCursor(0, 0);
+		display.print("DOUBLE CLICK");
 		display.display();
 	});
 
 	// Rotary encoder handling
 	encoder.setControlledValue(position);
+	encoder.setOnRotationListener([&](int) {
+		display.clearDisplay();
+		display.setCursor(0, 0);
+		display.print(position);
+		display.display();
+	});
+
 	Timer2.attachInterrupt([]() {
 		encoder.update();
-		button.update();
+		//button.update();
 	}).setFrequency(2000).start();
 
 	// Upading the display
