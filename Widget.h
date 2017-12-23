@@ -5,17 +5,30 @@
 class Widget
 {
 public:
-	Widget();
+	struct Attributes {
+		uint8_t frameWidth = 0;
+	};
 
-	inline Size size() const {
-		return _size;
+	Widget(const Point& topLeft = Point{0, 0}, const Size& size = Size{0, 0});
+
+	inline const Attributes& attributes() const {
+		return _attributes;
+	}
+
+	inline void setAttributes(const Attributes& attrs) {
+		_attributes = attrs;
 	}
 
 	inline Point topLeft() const {
 		return _topLeft;
 	}
 
+	inline Size size() const {
+		return _size;
+	}
+
 private:
-	Size _size;
+	Attributes _attributes;
 	Point _topLeft;
+	Size _size;
 };
