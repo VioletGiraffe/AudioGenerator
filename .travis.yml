@@ -5,6 +5,4 @@ install:
     - pip install -U platformio
     - platformio upgrade --dev
 script:
-    - platformio run -e uno
     - platformio run -e due
-    - platformio run -e esp32
