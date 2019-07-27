@@ -1,31 +1,46 @@
 #pragma once
 
-#include "default_constructible_ref.hpp"
-
 #include <Bounce2.h>
-
-#include <functional>
 
 class QuadratureRotaryEncoder
 {
 public:
 	enum RotationDirection { CW, CCW };
 
-	QuadratureRotaryEncoder(int pinA, int pinB, const default_constructible_ref<int>& value = default_constructible_ref<int>());
+	using RotationListener = void (*)(void* /*context */, RotationDirection);
 
-	inline void setOnRotationListener(const std::function<void(RotationDirection)>& listener) {
+	QuadratureRotaryEncoder(int pinA, int pinB);
+
+	inline void setOnRotationListener(void* context, RotationListener listener)  noexcept {
 		_rotationListener = listener;
+		_listenerContext = context;
 	}
 
-	inline void setControlledValue(const default_constructible_ref<int>& value) {
-		_value = value;
+	inline void setControlledValue(volatile int& counterVariable) noexcept {
+		_counterVariable = &counterVariable;
 	}
 
 	// Recommended update interval: 0.5 ms (2 kHz)
-	void update();
+	inline void update() noexcept {
+		_debouncerA.update();
+		_debouncerB.update();
+
+		if (_debouncerA.fell())
+		{
+			const bool cw = _debouncerB.read();
+			if (cw)
+				++*_counterVariable;
+			else
+				--*_counterVariable;
+
+			_rotationListener(_listenerContext, cw ? CW : CCW);
+		}
+	}
 
 private:
 	Bounce _debouncerA, _debouncerB;
-	std::function<void(RotationDirection)> _rotationListener = [](RotationDirection) {};
-	default_constructible_ref<int> _value;
+	RotationListener _rotationListener;
+	void* _listenerContext;
+
+	volatile int* _counterVariable;
 };

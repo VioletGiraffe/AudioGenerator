@@ -1,6 +1,6 @@
-#include "ButtonHandler.h"
+#include <Arduino_NoMinMax.h>
 
-#include <Arduino.h>
+#include "ButtonHandler.h"
 
 constexpr uint32_t LONG_PRESS_TIME_MILLIS = 700u;
 constexpr uint32_t DOUBLE_CLICK_TIME_MILLIS = 200u;

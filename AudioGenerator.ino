@@ -1,8 +1,9 @@
+#include <Arduino_NoMinMax.h>
+#include <SPI.h>
+
 #include <DueTimer.h>
-//#include <Adafruit_ST7735.h>
-#include <Adafruit_SSD1306.h>
-#include <gfxfont.h>
-#include <Adafruit_GFX.h>
+#include <MCUFRIEND_kbv.h>
+#include <TouchScreen.h>
 
 #include "FixedPoint.h"
 #include "WaveformSin.h"
@@ -15,100 +16,92 @@
 //#define TFT_RST 0  // you can also connect this to the Arduino reset, in which case, set this #define pin to 0!
 //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
-static Adafruit_SSD1306 display;
+auto display = MCUFRIEND_kbv{};
 
-#define RGB888_to_565(R, G, B) static_cast<uint16_t>(((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3))
+#ifndef COLOR_ORDER_BGR
+template<uint16_t R, uint16_t G, uint16_t B>
+constexpr uint16_t color = ((R & 0xF8u) << 8) | ((G & 0xFCu) << 3) | (B >> 3u);
+#else
+template<uint16_t R, uint16_t G, uint16_t B>
+constexpr uint16_t color = ((B & 0xF8u) << 8) | ((G & 0xFCu) << 3) | (R >> 3u);
+#endif
 
 static CGenerator soundGen; 
 constexpr uint32_t samplingRate = 24000;
 
-#define ROT_ENC_PIN_A 11
-#define ROT_ENC_PIN_B 12
+#define ROT_ENC_PIN_A 53
+#define ROT_ENC_PIN_B 51
 #define BUTTON_PIN 6
 
 static QuadratureRotaryEncoder encoder(ROT_ENC_PIN_A, ROT_ENC_PIN_B);
 static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
-static int position = 0;
+static volatile int position = 0;
 
 void playSound()
 {
 	dac_write(soundGen.nextSample<CWaveformSin, samplingRate>(1000u));
 }
 
+void rotationListener(void*, QuadratureRotaryEncoder::RotationDirection direction)
+{
+	display.fillScreen(color<0, 0, 0>);
+	display.setCursor(0, 0);
+	display.print(position);
+}
+
 void setup()
 {
-	//display.initR(INITR_144GREENTAB); // initialize a ST7735S chip, 1.44" TFT (yellow tab on a chinese clone)
-	display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false); // initialize with the I2C addr 0x3C (for the 128x64); by default, we'll generate the high voltage from the 3.3v line internally
-	display.clearDisplay();
-	display.display();
+	display.begin(display.readID());
 
-	//display.setTextColor(RGB888_to_565(0, 127, 255), ST7735_BLACK);
-	display.setTextColor(WHITE);
+	display.setTextColor(color<255, 255, 255>);
+	display.fillScreen(color<0, 0, 0>);
 
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
 
 	button.setButtonClickListener([]() {
-		display.clearDisplay();
+		display.fillScreen(color<0, 0, 0>);
 		display.setCursor(0, 0);
 		display.print("CLICK");
-		display.display();
 	});
 
 	button.setButtonLongPressListener([]() {
-		display.clearDisplay();
+		display.fillScreen(color<0, 0, 0>);
 		display.setCursor(0, 0);
 		display.print("LONG PRESS");
-		display.display();
 	});
 
 	button.setButtonPressListener([]() {
-		display.clearDisplay();
+		display.fillScreen(color<0, 0, 0>);
 		display.setCursor(0, 0);
 		display.print("PRESS");
-		display.display();
 	});
 
 	button.setButtonReleaseListener([]() {
-		display.clearDisplay();
+		display.fillScreen(color<0, 0, 0>);
 		display.setCursor(0, 0);
 		display.print("RELEASE");
-		display.display();
 	});
 
 	button.setButtonDoubleClickListener([]() {
-		display.clearDisplay();
+		display.fillScreen(color<0, 0, 0>);
 		display.setCursor(0, 0);
 		display.print("DOUBLE CLICK");
-		display.display();
 	});
 
 	// Rotary encoder handling
 	encoder.setControlledValue(position);
-	encoder.setOnRotationListener([&](int) {
-		display.clearDisplay();
-		display.setCursor(0, 0);
-		display.print(position);
-		display.display();
-	});
+	encoder.setOnRotationListener(nullptr, &rotationListener);
 
 	Timer2.attachInterrupt([]() {
 		encoder.update();
 		//button.update();
 	}).setFrequency(2000).start();
 
-	// Upading the display
-	Timer4.attachInterrupt([]() {
-		//display.clearDisplay();
-		//display.setCursor(0, 0);
-		//display.print(position);
-		//display.display();
-	}).setFrequency(10).start();
-
 	dac_setup();
 
-	Timer3.attachInterrupt(&playSound).setFrequency(samplingRate).start(); // 24 kHz sampling rate
+	//Timer3.attachInterrupt(&playSound).setFrequency(samplingRate).start(); // 24 kHz sampling rate
 }
 
 void dac_setup()
