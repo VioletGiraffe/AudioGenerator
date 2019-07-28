@@ -2,19 +2,31 @@
 #include <SPI.h>
 
 #include <MCUFRIEND_kbv.h>
-#include <TouchScreen.h>
+#include <TouchScreen_kbv.h>
 
 #include "FixedPoint.h"
 #include "WaveformSin.h"
 #include "Generator.h"
 #include "QuadratureRotaryEncoder.h"
-#include "ButtonHandler.h"
 
-//#define TFT_CS 10
-//#define TFT_DC 8
-//#define TFT_RST 0  // you can also connect this to the Arduino reset, in which case, set this #define pin to 0!
-//Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+//Touch For New ILI9341 TP
+#define TS_MINX 120
+#define TS_MAXX 900
 
+#define TS_MINY 70
+#define TS_MAXY 920
+
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 9   // can be a digital pin
+#define XP 8   // can be a digital pin
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+constexpr int16_t MINPRESSURE = 200, MAXPRESSURE = 1000;
+
+auto ts = TouchScreen_kbv(XP, YP, XM, YM, 300);
 auto display = MCUFRIEND_kbv{};
 
 #ifndef COLOR_ORDER_BGR
@@ -32,8 +44,7 @@ constexpr uint32_t samplingRate = 24000;
 #define ROT_ENC_PIN_B 49
 #define BUTTON_PIN 6
 
-static QuadratureRotaryEncoder encoder{ROT_ENC_PIN_A, ROT_ENC_PIN_B};
-static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
+//static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
 void playSound()
 {
@@ -52,44 +63,11 @@ void setup()
 	display.begin(display.readID());
 
 	display.setTextColor(color<255, 255, 255>);
-	display.fillScreen(color<0, 0, 0>);
+	display.fillScreen(color<0, 20, 0>);
 	display.setTextSize(2);
 
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
-
-	button.setButtonClickListener([]() {
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print("CLICK");
-	});
-
-	button.setButtonLongPressListener([]() {
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print("LONG PRESS");
-	});
-
-	button.setButtonPressListener([]() {
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print("PRESS");
-	});
-
-	button.setButtonReleaseListener([]() {
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print("RELEASE");
-	});
-
-	button.setButtonDoubleClickListener([]() {
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print("DOUBLE CLICK");
-	});
-
-	// Rotary encoder handling
-	//encoder.setOnRotationListener(nullptr, &rotationListener);
 
 	dac_setup();
 
@@ -118,10 +96,12 @@ inline void dac_write(int val)
 
 void loop()
 {
-	if (encoder.checkForEvent())
+	auto p = ts.getPointSafe();
+	if (p.z > 270 && p.z < 1000)
 	{
-		display.fillScreen(color<0, 0, 0>);
-		display.setCursor(0, 0);
-		display.print(encoder.counterValue());
+		p.x = map(p.x, 847, 141, 0, 240);
+		p.y = map(p.y, 122, 880, 0, 320);
+
+		display.drawPixel(p.x, p.y, color<0, 255, 100>);
 	}
 }
