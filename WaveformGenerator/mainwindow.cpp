@@ -20,15 +20,14 @@ MainWindow::MainWindow(QWidget *parent) :
 
 // Graph setup
 	ui->chartWidget->setChart(&_chart);
+	ui->chartWidget->setRenderHint(QPainter::Antialiasing);
 
 	_series = new QLineSeries;
 	_chart.addSeries(_series);
 
-	auto axisX = new QValueAxis;
-	_chart.setAxisX(axisX, _series);
-	auto axisY = new QValueAxis;
-	axisY->setTitleText("Amplitude");
-	_chart.setAxisY(axisY, _series);
+	_chart.addSeries(_series);
+	_chart.createDefaultAxes();
+	_chart.axes(Qt::Vertical).front()->setTitleText("Value");
 	_chart.legend()->hide();
 
 // Live UI
@@ -145,12 +144,12 @@ bool MainWindow::signedSamples() const
 
 void MainWindow::setupGraphXAxis()
 {
-	_chart.axisX()->setRange(0, numSamples());
+	_chart.axes(Qt::Horizontal).front()->setRange(0, numSamples());
 }
 
 void MainWindow::setupGraphYAxis()
 {
-	_chart.axisY()->setRange(signedSamples() ? -amplitude() : 0, signedSamples() ? amplitude() : 2.0 * amplitude());
+	_chart.axes(Qt::Vertical).front()->setRange(signedSamples() ? -amplitude() : 0, signedSamples() ? amplitude() : 2.0 * amplitude());
 }
 
 WaveformGenerator*MainWindow::currentWaveformGenerator() const
@@ -160,7 +159,7 @@ WaveformGenerator*MainWindow::currentWaveformGenerator() const
 
 QString MainWindow::sampleValueToSourceCode(const QString &type, float sample)
 {
-	const bool intType = type.toLower().contains("int");
+	const bool intType = type.contains("int", Qt::CaseInsensitive);
 	QString sampleText = intType ? QString::number((int64_t)(sample + 0.5f)) : QString::number((double)sample, 'g', 20);
 	if (!intType && !sampleText.contains('.') && !sampleText.contains('e'))
 		sampleText += ".0";
