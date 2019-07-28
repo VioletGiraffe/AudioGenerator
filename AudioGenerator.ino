@@ -75,7 +75,7 @@ void dac_setup()
 					| DACC_MR_TRGSEL(0b011) // Trigger by TIOA2
 					| DACC_MR_TAG_EN		// enable TAG to set channel in CDR
 					| DACC_MR_WORD_WORD		// write to both channels
-					| DACC_MR_REFRESH(1) | DACC_MR_STARTUP_8 | DACC_MR_MAXS;
+					| DACC_MR_REFRESH(1) | DACC_MR_STARTUP_1984 | DACC_MR_MAXS;
 
 	DACC->DACC_IER |= DACC_IER_TXBUFE; // Interrupt used by PDC DMA
 
