@@ -76,11 +76,10 @@ void setup()
 
 void dac_setup()
 {
-	PMC->PMC_PCER1 = PMC_PCER1_PID38; // DACC power ON
-	DACC->DACC_CR = DACC_CR_SWRST; // Reset DACC
-
+	dacc_reset(DACC);
+	
 	DACC->DACC_MR = DACC_MR_TRGEN_EN		// Hardware trigger select
-					| DACC_MR_TRGSEL(0b010) // Trigger by TIOA2
+					| DACC_MR_TRGSEL(0b011) // Trigger by TIOA2
 					| DACC_MR_TAG_EN		// enable TAG to set channel in CDR
 					| DACC_MR_WORD_WORD		// write to both channels
 					| DACC_MR_REFRESH(1) | DACC_MR_STARTUP_8 | DACC_MR_MAXS;
@@ -101,13 +100,16 @@ void dac_setup()
 	DACC->DACC_TCR = sinsize;
 	DACC->DACC_TNPR = (uint32_t)sinus[1]; // next DMA buffer (circular buffer)
 	DACC->DACC_TNCR = sinsize;
-	bufn = 1;
 	DACC->DACC_PTCR = DACC_PTCR_TXTEN; // Enable PDC Transmit channel request
+
+	bufn = 1;
+
+	pmc_enable_periph_clk(ID_DACC);
 }
 
 void DACC_Handler()
 {
-	const auto status = DACC->DACC_ISR; // Read and save DAC status register
+	DACC->DACC_ISR; // Read and save DAC status register
 	//if (status & DACC_ISR_TXBUFE)
 	{ // move DMA pointer to next buffer
 		bufn = 1u - bufn;
@@ -118,8 +120,8 @@ void DACC_Handler()
 
 void tc_setup()
 {
-	PMC->PMC_PCER0 |= PMC_PCER0_PID28;					   // TC2 power ON : Timer Counter 0 channel 2 IS TC2
-	TC0->TC_CHANNEL[1].TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1 // MCK/8, clk on rising edge
+	PMC->PMC_PCER0 |= PMC_PCER0_PID29;					   // TC2 power ON : Timer Counter 0 channel 2 IS TC2
+	TC0->TC_CHANNEL[2].TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK2 // MCK/8, clk on rising edge
 								| TC_CMR_WAVE			   // Waveform mode
 								| TC_CMR_WAVSEL_UP_RC	  // UP mode with automatic trigger on RC Compare
 								| TC_CMR_ACPA_CLEAR		   // Clear TIOA2 on RA compare match
@@ -127,10 +129,10 @@ void tc_setup()
 
 	//constexpr uint32_t targetSamplingRate = 500000;
 	//constexpr uint32_t divider = F_CPU / 8 / targetSamplingRate;
-	TC0->TC_CHANNEL[1].TC_RC = 2; //<*********************  Frequency = (Mck/8)/TC_RC = 44.1 KHz
-	TC0->TC_CHANNEL[1].TC_RA = 1;  //<********************   Any Duty cycle in between 1 and TC_RC
+	TC0->TC_CHANNEL[2].TC_RC = 2; //<*********************  Frequency = (Mck/8)/TC_RC = 44.1 KHz
+	TC0->TC_CHANNEL[2].TC_RA = 1;  //<********************   Any Duty cycle in between 1 and TC_RC
 
-	TC0->TC_CHANNEL[1].TC_CCR = TC_CCR_SWTRG | TC_CCR_CLKEN; // Software trigger TC2 counter and enable
+	TC0->TC_CHANNEL[2].TC_CCR = TC_CCR_SWTRG | TC_CCR_CLKEN; // Software trigger TC2 counter and enable
 }
 
 void loop()
