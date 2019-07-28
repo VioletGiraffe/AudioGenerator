@@ -1,7 +1,6 @@
 #include <Arduino_NoMinMax.h>
 #include <SPI.h>
 
-#include <DueTimer.h>
 #include <MCUFRIEND_kbv.h>
 #include <TouchScreen.h>
 
@@ -29,26 +28,24 @@ constexpr uint16_t color = ((B & 0xF8u) << 8) | ((G & 0xFCu) << 3) | (R >> 3u);
 static CGenerator soundGen; 
 constexpr uint32_t samplingRate = 24000;
 
-#define ROT_ENC_PIN_A 53
-#define ROT_ENC_PIN_B 51
+#define ROT_ENC_PIN_A 51
+#define ROT_ENC_PIN_B 49
 #define BUTTON_PIN 6
 
-static QuadratureRotaryEncoder encoder(ROT_ENC_PIN_A, ROT_ENC_PIN_B);
+static QuadratureRotaryEncoder encoder{ROT_ENC_PIN_A, ROT_ENC_PIN_B};
 static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
-
-static volatile int position = 0;
 
 void playSound()
 {
 	dac_write(soundGen.nextSample<CWaveformSin, samplingRate>(1000u));
 }
 
-void rotationListener(void*, QuadratureRotaryEncoder::RotationDirection direction)
-{
-	display.fillScreen(color<0, 0, 0>);
-	display.setCursor(0, 0);
-	display.print(position);
-}
+// void rotationListener(void*, RotationDirection direction)
+// {
+// 	display.fillScreen(color<0, 0, 0>);
+// 	display.setCursor(0, 0);
+// 	display.print(encoder.counterValue());
+// }
 
 void setup()
 {
@@ -56,6 +53,7 @@ void setup()
 
 	display.setTextColor(color<255, 255, 255>);
 	display.fillScreen(color<0, 0, 0>);
+	display.setTextSize(2);
 
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
@@ -91,13 +89,7 @@ void setup()
 	});
 
 	// Rotary encoder handling
-	encoder.setControlledValue(position);
-	encoder.setOnRotationListener(nullptr, &rotationListener);
-
-	Timer2.attachInterrupt([]() {
-		encoder.update();
-		//button.update();
-	}).setFrequency(2000).start();
+	//encoder.setOnRotationListener(nullptr, &rotationListener);
 
 	dac_setup();
 
@@ -126,5 +118,10 @@ inline void dac_write(int val)
 
 void loop()
 {
-
+	if (encoder.checkForEvent())
+	{
+		display.fillScreen(color<0, 0, 0>);
+		display.setCursor(0, 0);
+		display.print(encoder.counterValue());
+	}
 }

@@ -1,46 +1,67 @@
 #pragma once
 
-#include <Bounce2.h>
+#include "Rotary.h"
+
+enum RotationDirection { CW, CCW };
 
 class QuadratureRotaryEncoder
 {
-public:
-	enum RotationDirection { CW, CCW };
+	static void PinB_ISR()
+	{
+		const auto valB = digitalRead(49);
+		const auto valA = digitalRead(51);
+		
+		const auto result = _rotary.process(valA != 0, valB != 0);
+		if (result == DIR_CW)
+		{
+			++_counterVariable;
+			_event = true;
+		}
+		else if (result == DIR_CCW)
+		{
+			--_counterVariable;
+			_event = true;
+		}
+	}
 
+public:
 	using RotationListener = void (*)(void* /*context */, RotationDirection);
 
-	QuadratureRotaryEncoder(int pinA, int pinB);
+	QuadratureRotaryEncoder(int PinA, int PinB) noexcept
+	{
+		pinMode(PinA, INPUT_PULLUP);
+		pinMode(PinA, INPUT_PULLUP);
+
+		attachInterrupt(PinA, PinB_ISR, FALLING);
+		attachInterrupt(PinB, PinB_ISR, FALLING);
+	}
 
 	inline void setOnRotationListener(void* context, RotationListener listener)  noexcept {
 		_rotationListener = listener;
 		_listenerContext = context;
 	}
 
-	inline void setControlledValue(volatile int& counterVariable) noexcept {
-		_counterVariable = &counterVariable;
+	inline bool checkForEvent() noexcept {
+		if (_event)
+		{
+			_event = false;
+			return true;
+		}
+
+		return false;
 	}
 
-	// Recommended update interval: 0.5 ms (2 kHz)
-	inline void update() noexcept {
-		_debouncerA.update();
-		_debouncerB.update();
-
-		if (_debouncerA.fell())
-		{
-			const bool cw = _debouncerB.read();
-			if (cw)
-				++*_counterVariable;
-			else
-				--*_counterVariable;
-
-			_rotationListener(_listenerContext, cw ? CW : CCW);
-		}
+	inline int counterValue() const {
+		return _counterVariable;
 	}
 
 private:
-	Bounce _debouncerA, _debouncerB;
+	static volatile bool _event;
+
+	static Rotary _rotary;
+
 	RotationListener _rotationListener;
 	void* _listenerContext;
 
-	volatile int* _counterVariable;
+	static volatile int _counterVariable;
 };

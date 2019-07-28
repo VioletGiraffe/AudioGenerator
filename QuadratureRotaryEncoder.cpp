@@ -2,14 +2,6 @@
 
 #include "QuadratureRotaryEncoder.h"
 
-QuadratureRotaryEncoder::QuadratureRotaryEncoder(int pinA, int pinB)
-{
-	pinMode(pinA, INPUT_PULLUP);
-	pinMode(pinB, INPUT_PULLUP);
-
-	_debouncerA.attach(pinA);
-	_debouncerA.interval(4);
-
-	_debouncerB.attach(pinB);
-	_debouncerB.interval(4);
-}
+volatile bool QuadratureRotaryEncoder::_event = false;
+volatile int QuadratureRotaryEncoder::_counterVariable = 0;
+Rotary QuadratureRotaryEncoder::_rotary;
