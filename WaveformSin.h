@@ -1,22 +1,24 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 class CWaveformSin
 {
 public:
-	static inline size_t numSamples()
-	{
-		return 600u;
-	}
+	static constexpr size_t numSamples = 512;
 
-	static inline uint16_t sample(size_t index)
+	static inline uint32_t sample(size_t index)
 	{
 		return wavetable[index];
 	}
 
+	static inline constexpr auto bufferAddress()
+	{
+		return wavetable;
+	}
+
 private:
-	static const uint16_t wavetable[];
+	static uint32_t wavetable[numSamples];
 };
 

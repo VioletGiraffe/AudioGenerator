@@ -27,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	_series = new QLineSeries;
 	_chart.addSeries(_series);
 
-	_chart.addSeries(_series);
 	_chart.createDefaultAxes();
 	_chart.axes(Qt::Vertical).at(0)->setTitleText("Value");
 	_chart.legend()->hide();
@@ -93,7 +92,7 @@ MainWindow::~MainWindow()
 void MainWindow::generateWaveformSourceCode()
 {
 	const QString type = ui->type->text();
-	QString sourceCode = "const " + type + " wavetable[] = {\n";
+	QString sourceCode = type + QStringLiteral(" wavetable[%1] = {\n").arg(_samples.size());
 	for (const float sample: _samples)
 	{
 		QString sampleText = sampleValueToSourceCode(type, sample, true);
@@ -165,14 +164,17 @@ QString MainWindow::sampleValueToSourceCode(const QString &type, float sample, b
 
 	if (intType)
 	{
-		int64_t sampleInt = static_cast<int64_t>(::round(sample));
+		uint32_t sampleInt = static_cast<uint32_t>(::round(sample));
 		if (dualChannel)
 		{
 			assert(type == "uint32_t");
 			sampleInt |= (sampleInt << 16 | (1u << 28));
 		}
 
-		return QString::number(sampleInt);
+		auto text =	QString::number(sampleInt);
+		if (type.startsWith('u'))
+			text += 'U';
+		return text;
 	}
 	else
 	{

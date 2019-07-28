@@ -32,7 +32,6 @@ constexpr uint16_t color = ((B & 0xF8u) << 8) | ((G & 0xFCu) << 3) | (R >> 3u);
 #endif
 
 static CGenerator soundGen; 
-constexpr uint32_t samplingRate = 24000;
 
 #define ROT_ENC_PIN_A 51
 #define ROT_ENC_PIN_B 49
@@ -40,7 +39,7 @@ constexpr uint32_t samplingRate = 24000;
 
 //static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
-constexpr uint32_t sinsize = 1024;
+constexpr uint32_t sinsize = 512;
 uint32_t sinus[sinsize];
 
 void setup()
@@ -54,10 +53,12 @@ void setup()
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
 
+	constexpr float k = (float)PI * 2.0f / sinsize;
+
 	for (int i = 0; i < sinsize; ++i)
 	{
 		constexpr uint32_t chsel = 1 << 28;					// LSB on DAC0, MSB on DAC1 !!
-		uint32_t sample = static_cast<uint32_t>(2047.0f * sin((i * 2) * (float)PI / sinsize) + 2047.5f);
+		uint32_t sample = static_cast<uint32_t>(2047.0f * sin(i * k) + 2047.5f);
 		sinus[i] = sample | ((sample << 16) | chsel);
 		// MSB [31:16]on channel 1
 		// LSB [15:0] on chanel 0
@@ -89,10 +90,16 @@ void dac_setup()
 
 	/*************   configure PDC/DMA  for DAC *******************/
 
-	DACC->DACC_TPR = (uint32_t)sinus; // DMA buffer
+	// DACC->DACC_TPR = (uint32_t)CWaveformSin::bufferAddress(); // DMA buffer
+	// DACC->DACC_TCR = CWaveformSin::numSamples;
+	// DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress(); // next DMA buffer (circular buffer)
+	// DACC->DACC_TNCR = CWaveformSin::numSamples;
+
+	DACC->DACC_TPR = (uint32_t)CWaveformSin::bufferAddress(); // DMA buffer
 	DACC->DACC_TCR = sinsize;
-	DACC->DACC_TNPR = (uint32_t)sinus; // next DMA buffer (circular buffer)
+	DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress(); // next DMA buffer (circular buffer)
 	DACC->DACC_TNCR = sinsize;
+
 	DACC->DACC_PTCR = DACC_PTCR_TXTEN; // Enable PDC Transmit channel request
 
 	pmc_enable_periph_clk(ID_DACC);
@@ -103,7 +110,7 @@ void DACC_Handler()
 	DACC->DACC_ISR; // Read and save DAC status register
 
 	// Need to refresh the DMA buffer registers, even if nothing really needs to be done.
-	DACC->DACC_TNPR = (uint32_t)sinus;
+	DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress();
 	DACC->DACC_TNCR = sinsize;
 }
 

@@ -86,7 +86,7 @@
              <double>1000000.000000000000000</double>
             </property>
             <property name="value">
-             <double>2048.000000000000000</double>
+             <double>2047.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -124,7 +124,7 @@
           <item>
            <widget class="QLineEdit" name="type">
             <property name="text">
-             <string>uint16_t</string>
+             <string>uint32_t</string>
             </property>
            </widget>
           </item>
@@ -197,7 +197,7 @@
      <x>0</x>
      <y>0</y>
      <width>790</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>
