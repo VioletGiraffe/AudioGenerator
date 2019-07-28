@@ -39,7 +39,7 @@ static CGenerator soundGen;
 
 //static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
-constexpr uint32_t sinsize = 512;
+constexpr uint32_t sinsize = 16;
 uint32_t sinus[sinsize];
 
 void setup()
@@ -95,9 +95,9 @@ void dac_setup()
 	// DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress(); // next DMA buffer (circular buffer)
 	// DACC->DACC_TNCR = CWaveformSin::numSamples;
 
-	DACC->DACC_TPR = (uint32_t)CWaveformSin::bufferAddress(); // DMA buffer
+	DACC->DACC_TPR = (uint32_t)sinus; // DMA buffer
 	DACC->DACC_TCR = sinsize;
-	DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress(); // next DMA buffer (circular buffer)
+	DACC->DACC_TNPR = (uint32_t)sinus; // next DMA buffer (circular buffer)
 	DACC->DACC_TNCR = sinsize;
 
 	DACC->DACC_PTCR = DACC_PTCR_TXTEN; // Enable PDC Transmit channel request
@@ -110,7 +110,7 @@ void DACC_Handler()
 	DACC->DACC_ISR; // Read and save DAC status register
 
 	// Need to refresh the DMA buffer registers, even if nothing really needs to be done.
-	DACC->DACC_TNPR = (uint32_t)CWaveformSin::bufferAddress();
+	DACC->DACC_TNPR = (uint32_t)sinus;
 	DACC->DACC_TNCR = sinsize;
 }
 
@@ -125,8 +125,8 @@ void tc_setup()
 
 	//constexpr uint32_t targetSamplingRate = 500000;
 	//constexpr uint32_t divider = F_CPU / 8 / targetSamplingRate;
-	TC0->TC_CHANNEL[2].TC_RC = 2; //<*********************  Frequency = (Mck/8)/TC_RC = 44.1 KHz
-	TC0->TC_CHANNEL[2].TC_RA = 1;  //<********************   Any Duty cycle in between 1 and TC_RC
+	TC0->TC_CHANNEL[2].TC_RC = 4; //<*********************  Frequency = (Mck/8)/TC_RC
+	TC0->TC_CHANNEL[2].TC_RA = 1; //<********************   Any Duty cycle in between 1 and TC_RC
 
 	TC0->TC_CHANNEL[2].TC_CCR = TC_CCR_SWTRG | TC_CCR_CLKEN; // Software trigger TC2 counter and enable
 }
