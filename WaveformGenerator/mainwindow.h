@@ -4,9 +4,10 @@
 #include <QLineSeries>
 #include <QMainWindow>
 
-#include <cstdint>
 #include <memory>
 #include <vector>
+
+#include <stdint.h>
 
 namespace Ui {
 class MainWindow;
@@ -35,7 +36,7 @@ private:
 
 	WaveformGenerator* currentWaveformGenerator() const;
 
-	static QString sampleValueToSourceCode(const QString& type, float sample);
+	static QString sampleValueToSourceCode(const QString& type, float sample, bool dualChannel = false);
 
 private:
 	Ui::MainWindow *ui;

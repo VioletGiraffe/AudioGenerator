@@ -7,7 +7,6 @@
 #include "FixedPoint.h"
 #include "WaveformSin.h"
 #include "Generator.h"
-#include "QuadratureRotaryEncoder.h"
 
 //Touch For New ILI9341 TP
 #define TS_MINX 120
@@ -20,11 +19,6 @@
 #define XM A2  // must be an analog pin, use "An" notation!
 #define YM 9   // can be a digital pin
 #define XP 8   // can be a digital pin
-
-// For better pressure precision, we need to know the resistance
-// between X+ and X- Use any multimeter to read it
-// For the one we're using, its 300 ohms across the X plate
-constexpr int16_t MINPRESSURE = 200, MAXPRESSURE = 1000;
 
 auto ts = TouchScreen_kbv(XP, YP, XM, YM, 300);
 auto display = MCUFRIEND_kbv{};
@@ -47,8 +41,7 @@ constexpr uint32_t samplingRate = 24000;
 //static ButtonHandler button(BUTTON_PIN, ButtonHandler::NormalOpen);
 
 constexpr uint32_t sinsize = 1024;
-uint32_t sinus[2][sinsize];
-volatile uint32_t bufn = 1;
+uint32_t sinus[sinsize];
 
 void setup()
 {
@@ -64,10 +57,10 @@ void setup()
 	for (int i = 0; i < sinsize; ++i)
 	{
 		constexpr uint32_t chsel = 1 << 28;					// LSB on DAC0, MSB on DAC1 !!
-		sinus[0][i] = 2047.0f * sin((i * 2) * (float)PI / sinsize) + 2047.0f;  //  0 < sinus [i] < 4096
-		sinus[1][i] = sinus[0][i] |= sinus[0][i] << 16 | chsel; // two buffers formated
-																// MSB [31:16]on channel 1
-																// LSB [15:0] on chanel 0
+		uint32_t sample = static_cast<uint32_t>(2047.0f * sin((i * 2) * (float)PI / sinsize) + 2047.5f);
+		sinus[i] = sample | ((sample << 16) | chsel);
+		// MSB [31:16]on channel 1
+		// LSB [15:0] on chanel 0
 	}
 
 	tc_setup();
@@ -77,7 +70,7 @@ void setup()
 void dac_setup()
 {
 	dacc_reset(DACC);
-	
+
 	DACC->DACC_MR = DACC_MR_TRGEN_EN		// Hardware trigger select
 					| DACC_MR_TRGSEL(0b011) // Trigger by TIOA2
 					| DACC_MR_TAG_EN		// enable TAG to set channel in CDR
@@ -96,13 +89,11 @@ void dac_setup()
 
 	/*************   configure PDC/DMA  for DAC *******************/
 
-	DACC->DACC_TPR = (uint32_t)sinus[0]; // DMA buffer
+	DACC->DACC_TPR = (uint32_t)sinus; // DMA buffer
 	DACC->DACC_TCR = sinsize;
-	DACC->DACC_TNPR = (uint32_t)sinus[1]; // next DMA buffer (circular buffer)
+	DACC->DACC_TNPR = (uint32_t)sinus; // next DMA buffer (circular buffer)
 	DACC->DACC_TNCR = sinsize;
 	DACC->DACC_PTCR = DACC_PTCR_TXTEN; // Enable PDC Transmit channel request
-
-	bufn = 1;
 
 	pmc_enable_periph_clk(ID_DACC);
 }
@@ -110,12 +101,10 @@ void dac_setup()
 void DACC_Handler()
 {
 	DACC->DACC_ISR; // Read and save DAC status register
-	//if (status & DACC_ISR_TXBUFE)
-	{ // move DMA pointer to next buffer
-		bufn = 1u - bufn;
-		DACC->DACC_TNPR = (uint32_t)sinus[bufn];
-		DACC->DACC_TNCR = sinsize;
-	}
+
+	// Need to refresh the DMA buffer registers, even if nothing really needs to be done.
+	DACC->DACC_TNPR = (uint32_t)sinus;
+	DACC->DACC_TNCR = sinsize;
 }
 
 void tc_setup()
@@ -137,8 +126,9 @@ void tc_setup()
 
 void loop()
 {
+	constexpr int16_t MINPRESSURE = 270, MAXPRESSURE = 1000;
 	auto p = ts.getPointSafe();
-	if (p.z > 270 && p.z < 1000)
+	if (p.z > MINPRESSURE && p.z < MAXPRESSURE)
 	{
 		p.x = map(p.x, 847, 141, 0, 240);
 		p.y = map(p.y, 122, 880, 0, 320);

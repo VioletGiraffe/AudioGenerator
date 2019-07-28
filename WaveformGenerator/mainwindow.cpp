@@ -8,6 +8,8 @@
 #include <QStringBuilder>
 #include <QValueAxis>
 
+#include <assert.h>
+#include <math.h>
 #include <iterator>
 
 using namespace QtCharts;
@@ -27,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	_chart.addSeries(_series);
 	_chart.createDefaultAxes();
-	_chart.axes(Qt::Vertical).front()->setTitleText("Value");
+	_chart.axes(Qt::Vertical).at(0)->setTitleText("Value");
 	_chart.legend()->hide();
 
 // Live UI
@@ -91,10 +93,10 @@ MainWindow::~MainWindow()
 void MainWindow::generateWaveformSourceCode()
 {
 	const QString type = ui->type->text();
-	QString sourceCode = type + " waveform[] = {\n";
+	QString sourceCode = "const " + type + " wavetable[] = {\n";
 	for (const float sample: _samples)
 	{
-		QString sampleText = sampleValueToSourceCode(type, sample);
+		QString sampleText = sampleValueToSourceCode(type, sample, true);
 		sourceCode = sourceCode % '\t' % sampleText % ",\n";
 	}
 
@@ -144,12 +146,12 @@ bool MainWindow::signedSamples() const
 
 void MainWindow::setupGraphXAxis()
 {
-	_chart.axes(Qt::Horizontal).front()->setRange(0, numSamples());
+	_chart.axes(Qt::Horizontal).at(0)->setRange(0, numSamples());
 }
 
 void MainWindow::setupGraphYAxis()
 {
-	_chart.axes(Qt::Vertical).front()->setRange(signedSamples() ? -amplitude() : 0, signedSamples() ? amplitude() : 2.0 * amplitude());
+	_chart.axes(Qt::Vertical).at(0)->setRange(signedSamples() ? -amplitude() : 0, signedSamples() ? amplitude() : 2.0 * amplitude());
 }
 
 WaveformGenerator*MainWindow::currentWaveformGenerator() const
@@ -157,9 +159,33 @@ WaveformGenerator*MainWindow::currentWaveformGenerator() const
 	return _generators[(size_t)ui->waveform->currentIndex()].get();
 }
 
-QString MainWindow::sampleValueToSourceCode(const QString &type, float sample)
+QString MainWindow::sampleValueToSourceCode(const QString &type, float sample, bool dualChannel)
 {
 	const bool intType = type.contains("int", Qt::CaseInsensitive);
+
+	if (intType)
+	{
+		int64_t sampleInt = static_cast<int64_t>(::round(sample));
+		if (dualChannel)
+		{
+			assert(type == "uint32_t");
+			sampleInt |= (sampleInt << 16 | (1u << 28));
+		}
+
+		return QString::number(sampleInt);
+	}
+	else
+	{
+		assert(!dualChannel);
+		QString sampleText = QString::number((double)sample, 'g', 20);
+		if (!sampleText.contains('.') && !sampleText.contains('e'))
+			sampleText += ".0";
+
+		return sampleText + 'f';
+	}
+
+
+
 	QString sampleText = intType ? QString::number((int64_t)(sample + 0.5f)) : QString::number((double)sample, 'g', 20);
 	if (!intType && !sampleText.contains('.') && !sampleText.contains('e'))
 		sampleText += ".0";
